@@ -8,24 +8,24 @@ team_name_to_location['cleveland cavaliers'] = ('rocket mortgage fieldhouse', 'c
 team_name_to_location['dallas mavericks'] = ('american airlines center', 'dallas, texas')
 team_name_to_location['denver nuggets'] = ('pepsi center', 'denver, colorado')
 team_name_to_location['detroit pistons'] = ('little caesars arena', 'detroit, michigan')
-team_name_to_location['golden state warriors'] = ('chase center', 'san francisco, california')
+team_name_to_location['golden_state warriors'] = ('chase center', 'san francisco, california')
 team_name_to_location['houston rockets'] = ('toyota center', 'houston, texas')
 team_name_to_location['indiana pacers'] = ('bankers life fieldhouse', 'indianapolis, indiana')
-team_name_to_location['los angeles clippers'] = ('staples center', 'los angeles, california')
-team_name_to_location['los angeles lakers'] = ('staples center', 'los angeles, california')
-team_name_to_location['memphis grizzlies'] = ('fedex forum', 'memphis, tennessee')
+team_name_to_location['los_angeles clippers'] = ('staples center', 'los angeles, california')
+team_name_to_location['los_angeles lakers'] = ('staples center', 'los angeles, california')
+team_name_to_location['memphis grizzlies'] = ('fedex forum', 'memphis, tennessee') #hi
 team_name_to_location['miami heat'] = ('american airlines arena', 'miami, florida')
 team_name_to_location['milwaukee bucks'] = ('fiserv forum', 'milwaukee, wisconsin')
 team_name_to_location['minnesota timberwolves'] = ('target center', 'minneapolis, minnesota')
-team_name_to_location['new orleans pelicans'] = ('smoothie king center', 'new orleans, louisiana')
-team_name_to_location['new york knicks'] = ('madison square garden', 'new york city, new york')
-team_name_to_location['oklahoma city thunder'] = ('chesapeake energy arena', 'oklahoma city, oklahoma')
+team_name_to_location['new_orleans pelicans'] = ('smoothie king center', 'new orleans, louisiana')
+team_name_to_location['new_york knicks'] = ('madison square garden', 'new york city, new york')
+team_name_to_location['oklahoma_city thunder'] = ('chesapeake energy arena', 'oklahoma city, oklahoma')
 team_name_to_location['orlando magic'] = ('amway center', 'orlando, florida')
 team_name_to_location['philadelphia 76ers'] = ('wells fargo center', 'philadelphia, pennsylvania')
 team_name_to_location['phoenix suns'] = ('talking stick resort arena', 'phoenix, arizona')
-team_name_to_location['portland trail blazers'] = ('moda center', 'portland, oregon')
+team_name_to_location['portland trail_blazers'] = ('moda center', 'portland, oregon')
 team_name_to_location['sacramento kings'] = ('golden 1 center', 'sacramento, california')
-team_name_to_location['san antonio spurs'] = ('at&t center', 'san antonio, texas')
+team_name_to_location['san_antonio spurs'] = ('at&t center', 'san antonio, texas')
 team_name_to_location['toronto raptors'] = ('scotiabank arena', 'toronto, ontario')
 team_name_to_location['utah jazz'] = ('vivint smart home arena', 'salt lake city, utah')
 team_name_to_location['washington wizards'] = ('capital one arena', 'washington, d.c.')
@@ -46,7 +46,6 @@ class Team:
     def __init__(self, team_stats_dict, players):
         self.team_stats_dict = team_stats_dict
         self.players = players
-        self.arena_and_location = self.get_team_arena_and_location()
         self.filter_players()
 
     def filter_players(self):
@@ -57,8 +56,8 @@ class Team:
         self.team_stats_dict[stat_name] = value
 
     def get_team_arena_and_location(self):
-        return team_name_to_location[
-            self.team_stats_dict['TEAM_NAME'].lower() + ' ' + self.team_stats_dict['TEAM_PLACE'].lower()]
+        self.arena_and_location = team_name_to_location[
+            self.team_stats_dict['TEAM_PLACE'].lower() + ' ' + self.team_stats_dict['TEAM_NAME'].lower()]
 
 
 def process_player(entry_data):
@@ -71,9 +70,10 @@ def process_player(entry_data):
 
 def process_team(entry_data, players_list):
     team = Team({}, players_list)
-    for stat in entry_data[1:-1]:
+    for stat in entry_data[:-1]:
         value, stat_name = stat.split('￨')
         team.add_stat(stat_name, value)
+    team.get_team_arena_and_location()
     return team
 
 
@@ -120,13 +120,13 @@ def get_team_info(team_dict):
     pts_q4 = int(team_dict["TEAM-PTS-QTR4"])
     fgm = int(team_dict["TEAM-FGM"])
     fga = int(team_dict["TEAM-FGA"])
-    fg_pct = int(team_dict["TEAM-FG_PCT"])
+    fg_pct = float(team_dict["TEAM-FG_PCT"])
     fg3m = int(team_dict["TEAM-FG3M"])
     fg3a = int(team_dict["TEAM-FG3A"])
-    fg3_pct = int(team_dict["TEAM-FG3_PCT"])
+    fg3_pct = float(team_dict["TEAM-FG3_PCT"])
     ftm = int(team_dict["TEAM-FTM"])
     fta = int(team_dict["TEAM-FTA"])
-    ft_pct = int(team_dict["TEAM-FT_PCT"])
+    ft_pct = float(team_dict["TEAM-FT_PCT"])
     reb = int(team_dict["TEAM-REB"])
     ast = int(team_dict["TEAM-AST"])
     tov = int(team_dict["TEAM-TOV"])
@@ -157,6 +157,7 @@ def game_stats_to_text(home_team, away_team):
         paragraph.append(first_line % (vis_city + " " + vis_name, vis_wins, vis_losses,
                                        home_city + " " + home_name, home_wins, home_losses, vis_pts, home_pts,
                                        home_team.arena_and_location[0], home_team.arena_and_location[1]))
+    return ''.join(paragraph)
 
 
 if __name__ == '__main__':
