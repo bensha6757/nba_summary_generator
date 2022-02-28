@@ -136,7 +136,7 @@ def get_team_info(team_dict):
 
 def game_stats_to_text(home_team, away_team):
     first_line = "The %s ( %d - %d ) defeated the %s ( %d - %d ) %d - %d at the %s in %s."
-    player_line = "%s scored %d points ( %d - %d FG , %d - %d 3Pt , %d - %d FT ) to go with %d rebounds ."
+    player_line = "%s ,playing for %s , %s , played %d minutes ,scored %d points ( %d - %d FG , %d - %d 3Pt , %d - %d FT ) to go with %d rebounds, %d assists, %d steals, %d blocks and %d fouls"
 
     paragraph = []
 
@@ -153,10 +153,35 @@ def game_stats_to_text(home_team, away_team):
         paragraph.append(first_line % (home_city + " " + home_name, home_wins, home_losses,
                                        vis_city + " " + vis_name, vis_wins, vis_losses, home_pts, vis_pts,
                                        home_team.arena_and_location[0], home_team.arena_and_location[1]))
+        for player in home_team.players:
+            player_data=player.player_stats_dict
+            paragraph.append(player_line % (player_data['FIRST_NAME']+" "+player_data['LAST_NAME'],home_name,"starter" if player_data['STARTER']=="yes" else "off the bench ",
+                                            player_data["MIN"],player_data["PTS"],player_data["FGA"],player_data["FGM"],
+                                            player_data["FG3A"],player_data["FG3M"],player_data["FTA"],player_data["FTM"],
+                                            player_data["REB"],player_data["AST"],player_data["STL"],player_data["BLK"],player_data["PF"]))
+        for player in away_team.players:
+            player_data=player.player_stats_dict
+            paragraph.append(player_line % (player_data['FIRST_NAME']+" "+player_data['LAST_NAME'],vis_name,"starter" if player_data['STARTER']=="yes" else "off the bench ",
+                                            player_data["MIN"],player_data["PTS"],player_data["FGA"],player_data["FGM"],
+                                            player_data["FG3A"],player_data["FG3M"],player_data["FTA"],player_data["FTM"],
+                                            player_data["REB"],player_data["AST"],player_data["STL"],player_data["BLK"],player_data["PF"]))    
     else:
         paragraph.append(first_line % (vis_city + " " + vis_name, vis_wins, vis_losses,
                                        home_city + " " + home_name, home_wins, home_losses, vis_pts, home_pts,
                                        home_team.arena_and_location[0], home_team.arena_and_location[1]))
+        for player in away_team.players:
+            player_data=player.player_stats_dict
+            paragraph.append(player_line % (player_data['FIRST_NAME']+" "+player_data['LAST_NAME'],vis_name,"starter" if player_data['STARTER']=="yes" else "off the bench ",
+                                            player_data["MIN"],player_data["PTS"],player_data["FGA"],player_data["FGM"],
+                                            player_data["FG3A"],player_data["FG3M"],player_data["FTA"],player_data["FTM"],
+                                            player_data["REB"],player_data["AST"],player_data["STL"],player_data["BLK"],player_data["PF"]))
+        for player in home_team.players:
+            player_data=player.player_stats_dict
+            paragraph.append(player_line % (player_data['FIRST_NAME']+" "+player_data['LAST_NAME'],home_name,"starter" if player_data['STARTER']=="yes" else "off the bench ",
+                                            player_data["MIN"],player_data["PTS"],player_data["FGA"],player_data["FGM"],
+                                            player_data["FG3A"],player_data["FG3M"],player_data["FTA"],player_data["FTM"],
+                                            player_data["REB"],player_data["AST"],player_data["STL"],player_data["BLK"],player_data["PF"]))
+        
     return ''.join(paragraph)
 
 
