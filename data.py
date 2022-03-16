@@ -9,7 +9,7 @@ class Dataset(torch.utils.data.Dataset):
                  n_descriptions=5):
         self.data = data
         self.n_descriptions = n_descriptions
-        self.sort_data() # here
+        # self.sort_data() # here
 
     def __len__(self):
         return len(self.data)
@@ -22,14 +22,14 @@ class Dataset(torch.utils.data.Dataset):
         summary = self.get_summary(example)
         descriptions = example['descriptions'][:self.n_descriptions]
 
-        scores = [float(c['score']) for c in descriptions]
-        scores = torch.tensor(scores)
+     #   scores = [float(c['score']) for c in descriptions]
+      #  scores = torch.tensor(scores)
 
         return {
             'index': index,
             'summary': summary,
-            'descriptions': descriptions,
-            'scores': scores # here
+            'descriptions': descriptions
+       #     'scores': scores # here
         }
 
     def sort_data(self): # here
@@ -91,100 +91,6 @@ class Collator(object):
 
 def load_data(data_path=None, global_rank=-1, world_size=-1):
     assert data_path
-    if data_path.endswith('.jsonl'):
-        data = open(data_path, 'r')
-    elif data_path.endswith('.json'):
-        with open(data_path, 'r') as fin:
-            data = json.load(fin)
-    examples = []
-    for k, example in enumerate(data):
-        if global_rank > -1 and not k % world_size == global_rank:
-            continue
-        if data_path is not None and data_path.endswith('.jsonl'):
-            example = json.loads(example)
-        if not 'id' in example:
-            example['id'] = k
-        for c in example['descriptions']:
-            if not 'score' in c:
-                c['score'] = 1.0 / (k + 1)
-        examples.append(example)
-    ## egrave: is this needed?
-    if data_path is not None and data_path.endswith('.jsonl'):
-        data.close()
-
-    return examples
-
-
-class RetrieverCollator(object):
-    def __init__(self, tokenizer, description_maxlength=200, question_maxlength=40):
-        self.tokenizer = tokenizer
-        self.description_maxlength = description_maxlength
-        self.question_maxlength = question_maxlength
-
-    def __call__(self, batch):
-        index = torch.tensor([ex['index'] for ex in batch])
-
-        question = [ex['question'] for ex in batch]
-        question = self.tokenizer.batch_encode_plus(
-            question,
-            pad_to_max_length=True,
-            return_tensors="pt",
-            max_length=self.question_maxlength,
-            truncation=True
-        )
-        question_ids = question['input_ids']
-        question_mask = question['attention_mask'].bool()
-
-        if batch[0]['scores'] is None or batch[0]['descriptions'] is None:
-            return index, question_ids, question_mask, None, None, None
-
-        scores = [ex['scores'] for ex in batch]
-        scores = torch.stack(scores, dim=0)
-
-        descriptions = [ex['descriptions'] for ex in batch]
-        description_ids, description_masks = encode_descriptions(
-            descriptions,
-            self.tokenizer,
-            self.description_maxlength
-        )
-
-        return (index, question_ids, question_mask, description_ids, description_masks, scores)
-
-
-class TextDataset(torch.utils.data.Dataset):
-    def __init__(self,
-                 data,
-                 title_prefix='title:',
-                 description_prefix='context:'):
-        self.data = data
-        self.title_prefix = title_prefix
-        self.description_prefix = description_prefix
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, index):
-        example = self.data[index]
-        text = self.title_prefix + " " + example[2] + " " + \
-               self.description_prefix + " " + example[1]
-        return example[0], text
-
-
-class TextCollator(object):
-    def __init__(self, tokenizer, maxlength=200):
-        self.tokenizer = tokenizer
-        self.maxlength = maxlength
-
-    def __call__(self, batch):
-        index = [x[0] for x in batch]
-        encoded_batch = self.tokenizer.batch_encode_plus(
-            [x[1] for x in batch],
-            pad_to_max_length=True,
-            return_tensors="pt",
-            max_length=self.maxlength,
-            truncation=True
-        )
-        text_ids = encoded_batch['input_ids']
-        text_mask = encoded_batch['attention_mask'].bool()
-
-        return index, text_ids, text_mask
+    with open(data_path, 'r') as fin:
+        data = json.load(fin)
+    return [example for k, example in enumerate(data) if global_rank <= -1 or k % world_size == global_rank]
