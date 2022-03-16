@@ -312,8 +312,7 @@ def preprocess_data(input_files, output_file_name, blacklist):
 if __name__ == '__main__':
     blacklist = 'injured|injury|injuries|referee|refereeing|referees|judge|judges|judging|judgment|all-star|allstar' \
                 '|all star|knee|knees|shoulder|shoulders|series|serieses|Achilles|neck|hamstring|Next ,' \
-                '|\(.[a-z]+.\)|playoff|playoffs|will head|next game|next games|will travel|road trip|road ' \
-                'trips|road-trip '
+                '|\(.[a-z]+.\)|playoff|playoffs|will head|next game|next games|will travel|road trip|road trips|road-trip '
 
     input_files = ["./inputs/D1_2014", "./inputs/D1_2015", "./inputs/D1_2016", "./inputs/D1_2017", "./inputs/D1_2018"]
     output_file_name = "./preprocessed_data.json"
