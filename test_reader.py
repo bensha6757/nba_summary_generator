@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
     opt.eval_data = 'preprocessed_data.json'
     opt.per_gpu_batch_size = 1
-    opt.n_context = 5
+    opt.n_context = 50
     opt.name = "test"
     opt.checkpoint_dir = 'checkpoint'
     opt.world_size = 1

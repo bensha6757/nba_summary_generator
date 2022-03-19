@@ -6,7 +6,7 @@ import json
 class Dataset(torch.utils.data.Dataset):
     def __init__(self,
                  data,
-                 n_descriptions=5):
+                 n_descriptions=50):
         self.data = data
         self.n_descriptions = n_descriptions
         # self.sort_data() # here
