@@ -18,7 +18,7 @@ import util
 import evaluation
 import data
 import model
-
+from tqdm import tqdm
 
 def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, collator, best_dev_em, checkpoint_path):
 
@@ -45,7 +45,8 @@ def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, c
     model.train()
     while step < opt.total_steps:
         epoch += 1
-        for i, batch in enumerate(train_dataloader):
+        print('epoch #', epoch)
+        for i, batch in enumerate(tqdm(train_dataloader)):
             step += 1
             (idx, labels, _, context_ids, context_mask) = batch
 
@@ -69,22 +70,21 @@ def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, c
             if step % opt.eval_freq == 0:
                 dev_em = evaluate(model, eval_dataset, tokenizer, collator, opt)
                 model.train()
-                if opt.is_main:
-                    if dev_em > best_dev_em:
-                        best_dev_em = dev_em
-                        util.save(model, optimizer, scheduler, step, best_dev_em,
-                                  opt, checkpoint_path, 'best_dev')
-                    log = f"{step} / {opt.total_steps} |"
-                    log += f"train: {curr_loss/opt.eval_freq:.3f} |"
-                    log += f"evaluation: {100*dev_em:.2f}EM |"
-                    log += f"lr: {scheduler.get_last_lr()[0]:.5f}"
-                    logger.info(log)    
-                    if tb_logger is not None:
-                        tb_logger.add_scalar("Evaluation", dev_em, step)
-                        tb_logger.add_scalar("Training", curr_loss / (opt.eval_freq), step)
-                    curr_loss = 0.
+                if dev_em > best_dev_em:
+                    best_dev_em = dev_em
+                    util.save(model, optimizer, scheduler, step, best_dev_em,
+                                opt, checkpoint_path, 'best_dev')
+                log = f"{step} / {opt.total_steps} |"
+                log += f"train: {curr_loss/opt.eval_freq:.3f} |"
+                log += f"evaluation: {100*dev_em:.2f}EM |"
+                log += f"lr: {scheduler.get_last_lr()[0]:.5f}"
+                logger.info(log)    
+                if tb_logger is not None:
+                    tb_logger.add_scalar("Evaluation", dev_em, step)
+                    tb_logger.add_scalar("Training", curr_loss / (opt.eval_freq), step)
+                curr_loss = 0.
 
-            if opt.is_main and step % opt.save_freq == 0:
+            if step % opt.save_freq == 0:
                 util.save(model, optimizer, scheduler, step, best_dev_em,
                           opt, checkpoint_path, f"step-{step}")
             if step > opt.total_steps:
@@ -110,15 +110,18 @@ def evaluate(model, dataset, tokenizer, collator, opt):
             outputs = model.generate(
                 input_ids=context_ids.cuda(),
                 attention_mask=context_mask.cuda(),
-                max_length=50
+                max_length=700
             )
 
             for k, o in enumerate(outputs):
                 ans = tokenizer.decode(o, skip_special_tokens=True)
-                gold = dataset.get_example(idx[k])['answers']
+                if i % 4 == 0:
+                    print(ans)
+                gold = dataset.get_example(idx[k])['summary']
                 score = evaluation.ems(ans, gold)
                 total += 1
                 exactmatch.append(score)
+            print('************************************************')
 
     exactmatch, total = util.weighted_average(np.mean(exactmatch), total, opt)
     return exactmatch
@@ -139,6 +142,7 @@ if __name__ == "__main__":
     if opt.is_distributed:
         torch.distributed.barrier()
     checkpoint_path.mkdir(parents=True, exist_ok=True)
+    opt.is_main = True
     #if not checkpoint_exists and opt.is_main:
     #    options.print_options(opt)
     #checkpoint_path, checkpoint_exists = util.get_checkpoint_path(opt)
