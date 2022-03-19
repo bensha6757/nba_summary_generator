@@ -1,6 +1,7 @@
 import json
 import math
 import re
+import pandas as pd
 
 team_name_to_location = {}
 team_name_to_location['atlanta hawks'] = ('State Farm Arena', 'Atlanta, Georgia')
@@ -35,6 +36,14 @@ team_name_to_location['utah jazz'] = ('Vivint Smart Home Arena', 'Salt Lake City
 team_name_to_location['washington wizards'] = ('Capital One Arena', 'Washington, D.C.')
 
 
+def read_position_csv(file_name):
+    return pd.read_csv(file_name)
+
+
+players_position_data = read_position_csv('./inputs/player_to_position.csv')
+players_position_data = dict(zip(players_position_data['PLAYER'].str.lower(), players_position_data['POS']))
+
+
 class Player:
     def __init__(self, player_stats_dict):
         self.player_stats_dict = player_stats_dict
@@ -53,7 +62,7 @@ class Team:
         self.filter_players()
 
     def filter_players(self):
-        self.players.sort(key=lambda player: int(player.player_stats_dict['MIN']))
+        self.players.sort(key=lambda player: int(player.player_stats_dict['MIN']), reverse=True)
         players = [player for player in self.players if player.player_stats_dict['STARTER'] == 'yes']
         other_players = [p for p in self.players if p.player_stats_dict['STARTER'] == 'no'][:2]
         self.players = players + other_players
@@ -145,15 +154,36 @@ def get_quarter_score_line(quarter, home_full_name, vis_full_name, home_q_pts, v
         paragraph.append(quarter_score_win % (vis_full_name, home_full_name, vis_q_pts, home_q_pts, quarter))
 
 
+def get_player_position(player_name):
+    player_name = player_name.replace("_", " ")
+    player_name = player_name.lower()
+
+    if player_name not in players_position_data:
+        return ""
+    return players_position_data[player_name]
+
+
 def get_players_line(players, team_name, paragraph):
-    player_line = " %s , playing for %s , %s , played %d minutes ,scored %d points (%d - %d shooting with %d percent , " \
-                  "%d - %d with %d percent from three point range and %d - %d with %d percent from free throw line) ," \
-                  " he contributed %d rebounds ( %d offensive rebounds ) , %d assists, %d steals, %d blocks, " \
-                  "and committed %d fouls and %d turnovers "
+    player_line = "%s , playing for %s , %s , played %d minutes , scored %d points ( %d - %d with %d percent from " \
+                  "the field , %d - %d with %d percent from three point range and %d - %d with %d percent from free " \
+                  "throw line ) , he contributed %d rebounds ( %d offensive rebounds ) , %d assists, %d steals , " \
+                  "%d blocks , and committed %d fouls and %d turnovers "
     for player in players:
         player_data = player.player_stats_dict
-        player_line_values = player_line % (player_data['FIRST_NAME'] + " " + player_data['LAST_NAME'], team_name,
-                                            "starter" if player_data['STARTER'] == "yes" else "off the bench",
+        player_full_name = player_data['FIRST_NAME'] + " " + player_data['LAST_NAME']
+        position = get_player_position(player_full_name)
+        if position != '':
+            if player_data['STARTER'] == "yes":
+                position_passage = "started at " + position
+            else:
+                position_passage = "came off the bench as " + position
+        else:
+            if player_data['STARTER'] == "yes":
+                position_passage = "as a starter"
+            else:
+                position_passage = "off the bench"
+
+        player_line_values = player_line % (player_full_name, team_name, position_passage,
                                             int(player_data["MIN"]), int(player_data["PTS"]),
                                             int(player_data["FGM"]), int(player_data["FGA"]),
                                             math.floor(float(
@@ -169,19 +199,21 @@ def get_players_line(players, team_name, paragraph):
                                             int(player_data["AST"]), int(player_data["STL"]),
                                             int(player_data["BLK"]), int(player_data["PF"]), int(player_data['TO']))
 
-        player_line_values = player_line_values.replace("0 - 0 shooting and 0 percent , ", "")
-        player_line_values = player_line_values.replace("0 - 0 and 0 percent for three , ", "")
-        player_line_values = player_line_values.replace(" , 0 - 0 and 0 percent free throw", "")
-        player_line_values = player_line_values.replace(" and 100 percent", "")
+        player_line_values = player_line_values.replace("0 - 0 shooting with 0 percent , ", "")
+        player_line_values = player_line_values.replace("0 - 0 with 0 percent from three point range and ", "")
+        player_line_values = player_line_values.replace("0 - 0 with 0 percent from free throw line", "")
 
         player_line_values = player_line_values.replace("()", "")
+        player_line_values = player_line_values.replace("( )", "")
+        player_line_values = player_line_values.replace("(  )", "")
+        player_line_values = player_line_values.replace("  ", "")
         player_line_values = player_line_values.replace(" ( 0 offensive rebounds )", "")
         paragraph.append(player_line_values)
 
 
 def get_team_additional_stats(team_city, team_name, fgm, fga, fg_pct, fg3m, fg3a, fg3_pct, ftm, fta, ft_pct, reb, ast,
                               tov, paragraph):
-    stats = " %s shot %d - of - %d with %d percent from the field , %d - of - %d with %d percent from three - point " \
+    stats = "%s shot %d - of - %d with %d percent from the field , %d - of - %d with %d percent from three - point " \
             "range and %d - of - %d with %d percent from the free - throw line . %s , as a team added %d assists and %d " \
             "rebounds . The %s were forced into %d turnovers "
 
@@ -232,8 +264,8 @@ def game_stats_to_text(home_team, away_team):
     get_players_line(home_team.players, home_city, home_players_paragraph)
     get_players_line(away_team.players, vis_city, vis_players_paragraph)
 
-    paragraph.append('.'.join(home_players_paragraph))
-    paragraph.append('.'.join(vis_players_paragraph))
+    paragraph.extend(home_players_paragraph)
+    paragraph.extend(vis_players_paragraph)
     return paragraph
 
 
