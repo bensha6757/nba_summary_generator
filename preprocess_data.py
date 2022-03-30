@@ -2,6 +2,7 @@ import json
 import math
 import re
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 team_name_to_location = {}
 team_name_to_location['atlanta hawks'] = ('State Farm Arena', 'Atlanta, Georgia')
@@ -326,19 +327,27 @@ def create_json_format(summary, descriptions):
 
 def preprocess_data(input_files, output_file_name, blacklist):
     json_elements = []
-    with open(output_file_name, "w") as output_file:
-        for input_file_name in input_files:
-            with open(input_file_name + "_data.txt", "r", encoding="utf8") as stats_input_file:
-                with open(input_file_name + "_text.txt", "r", encoding="utf8") as summaries_input_file:
-                    stats = stats_input_file.readlines()
-                    summaries = summaries_input_file.readlines()
-                    for i in range(len(stats)):
-                        home_team, away_team = process_game_stats(stats[i])
-                        descriptions = game_stats_to_text(home_team, away_team)
-                        summary = summaries_cleaner(blacklist, summaries[i])
-                        json_elements.append(create_json_format(summary, descriptions))
-        json_element = json.dumps(json_elements, indent=2)
-        print(json_element, file=output_file)
+    for input_file_name in input_files:
+        with open(input_file_name + "_data.txt", "r", encoding="utf8") as stats_input_file:
+            with open(input_file_name + "_text.txt", "r", encoding="utf8") as summaries_input_file:
+                stats = stats_input_file.readlines()
+                summaries = summaries_input_file.readlines()
+                for i in range(len(stats)):
+                    home_team, away_team = process_game_stats(stats[i])
+                    descriptions = game_stats_to_text(home_team, away_team)
+                    summary = summaries_cleaner(blacklist, summaries[i])
+                    json_elements.append(create_json_format(summary, descriptions))
+
+    train, test = train_test_split(json_elements, test_size=0.2)
+    val, test = train_test_split(test, test_size=0.5)
+    write_output_file(output_file_name, '_train.json', train)
+    write_output_file(output_file_name, '_test.json', test)
+    write_output_file(output_file_name, '_val.json', val)
+
+
+def write_output_file(output_file_name, file_name_suffix, data):
+    with open(output_file_name + file_name_suffix, "w") as output_file:
+        print(json.dumps(data, indent=2), file=output_file)
 
 
 if __name__ == '__main__':
@@ -347,5 +356,5 @@ if __name__ == '__main__':
                 '|\(.[a-z]+.\)|playoff|playoffs|will head|next game|next games|will travel|road trip|road trips|road-trip '
 
     input_files = ["./inputs/D1_2014", "./inputs/D1_2015", "./inputs/D1_2016", "./inputs/D1_2017", "./inputs/D1_2018"]
-    output_file_name = "./preprocessed_data.json"
+    output_file_name = "./inputs/preprocessed_data"
     preprocess_data(input_files, output_file_name, blacklist)
