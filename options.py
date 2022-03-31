@@ -83,8 +83,7 @@ class Options():
                         help="Main port (for multi-node SLURM jobs)")
         self.parser.add_argument('--seed', type=int, default=0, help="random seed for initialization")
         # training parameters
-        self.parser.add_argument('--eval_freq', type=int, default=500,
-                        help='evaluate model every <eval_freq> steps during training')
+        self.parser.add_argument('--eval_freq', type=int, default=2000,help='evaluate model every <eval_freq> steps during training')
         self.parser.add_argument('--save_freq', type=int, default=5000,
                         help='save model every <save_freq> steps during training')
         self.parser.add_argument('--eval_print_freq', type=int, default=1000,
