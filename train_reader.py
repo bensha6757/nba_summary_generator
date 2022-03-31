@@ -109,13 +109,14 @@ def evaluate(model, dataset, tokenizer, collator, opt):
 
             for k, o in enumerate(outputs):
                 ans = tokenizer.decode(o, skip_special_tokens=True)
-                if i % 4 == 0:
+                if i % 500 == 0:
                     print(ans)
                 gold = dataset.get_example(idx[k])['summary']
                 score = evaluation.ems(ans, gold)
                 total += 1
                 exactmatch.append(score)
-            print('************************************************')
+            if i % 500 == 0:
+                print('************************************************')
 
     exactmatch, total = util.weighted_average(np.mean(exactmatch), total, opt)
     return exactmatch
