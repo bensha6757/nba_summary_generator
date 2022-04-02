@@ -1,0 +1,50 @@
+[03/16/2022 19:03:09] {options.py:110} INFO - 
+              answer_maxlength: -1                                      
+                checkpoint_dir: checkpoint                              	(default: ./checkpoint/)
+                        device: cpu                                     	(default: None)
+                     eval_data: preprocessed_data.json                  	(default: none)
+                     eval_freq: 500                                     
+               eval_print_freq: 1000                                    
+                   global_rank: 0                                       	(default: None)
+                is_distributed: False                                   	(default: None)
+                       is_main: True                                    	(default: None)
+                  is_slurm_job: False                                   	(default: None)
+                    local_rank: 0                                       	(default: -1)
+                     main_port: -1                                      
+                       maxload: -1                                      
+                    model_path: none                                    
+                    model_size: base                                    
+                     multi_gpu: False                                   	(default: None)
+                    multi_node: False                                   	(default: None)
+                     n_context: 5                                       	(default: 1)
+                n_gpu_per_node: 0                                       	(default: None)
+                       n_nodes: 1                                       	(default: None)
+                          name: test                                    	(default: experiment_name)
+                      no_title: False                                   
+                       node_id: 0                                       	(default: None)
+            per_gpu_batch_size: 1                                       
+                     save_freq: 5000                                    
+                          seed: 0                                       
+                text_maxlength: 200                                     
+              train_batch_size: 1                                       	(default: None)
+                    train_data: none                                    
+                use_checkpoint: False                                   
+                    world_size: 0                                       	(default: None)
+   write_crossattention_scores: False                                   
+                 write_results: False                                   
+
+[03/16/2022 19:22:40] {test_reader.py:135} INFO - Start eval
+[03/16/2022 19:23:40] {test_reader.py:135} INFO - Start eval
+[03/16/2022 19:23:59] {test_reader.py:135} INFO - Start eval
+[03/16/2022 19:30:59] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:33:09] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:34:02] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:35:51] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:37:51] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:50:14] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:52:18] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:54:54] {test_reader.py:136} INFO - Start eval
+[03/16/2022 19:57:42] {test_reader.py:136} INFO - Start eval
+[03/16/2022 20:05:02] {test_reader.py:136} INFO - Start eval
+[03/16/2022 20:11:15] {test_reader.py:136} INFO - Start eval
+[03/16/2022 20:21:54] {test_reader.py:136} INFO - Start eval

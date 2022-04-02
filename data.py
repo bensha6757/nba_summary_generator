@@ -6,10 +6,9 @@ import json
 class Dataset(torch.utils.data.Dataset):
     def __init__(self,
                  data,
-                 n_descriptions=5):
+                 n_descriptions=50):
         self.data = data
         self.n_descriptions = n_descriptions
-        # self.sort_data() # here
 
     def __len__(self):
         return len(self.data)
@@ -22,21 +21,11 @@ class Dataset(torch.utils.data.Dataset):
         summary = self.get_summary(example)
         descriptions = example['descriptions'][:self.n_descriptions]
 
-     #   scores = [float(c['score']) for c in descriptions]
-      #  scores = torch.tensor(scores)
-
         return {
             'index': index,
             'summary': summary,
             'descriptions': descriptions
-       #     'scores': scores # here
         }
-
-    def sort_data(self): # here
-        if self.n_descriptions is None or not 'score' in self.data[0]['descriptions'][0]:
-            return
-        for ex in self.data:
-            ex['descriptions'].sort(key=lambda x: float(x['score']), reverse=True)
 
     def get_example(self, index):
         return self.data[index]

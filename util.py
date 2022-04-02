@@ -16,6 +16,7 @@ import csv
 
 logger = logging.getLogger(__name__)
 
+
 def init_logger(is_main=True, is_distributed=False, filename=None):
     if is_distributed:
         torch.distributed.barrier()
@@ -32,6 +33,7 @@ def init_logger(is_main=True, is_distributed=False, filename=None):
     logging.getLogger('transformers.tokenization_utils_base').setLevel(logging.ERROR)
     return logger
 
+
 def get_checkpoint_path(opt):
     checkpoint_path = Path(opt.checkpoint_dir) / opt.name
     checkpoint_exists = checkpoint_path.exists()
@@ -39,6 +41,7 @@ def get_checkpoint_path(opt):
         torch.distributed.barrier()
     checkpoint_path.mkdir(parents=True, exist_ok=True)
     return checkpoint_path, checkpoint_exists
+
 
 def symlink_force(target, link_name):
     try:
@@ -50,10 +53,11 @@ def symlink_force(target, link_name):
         else:
             raise e
 
+
 def save(model, optimizer, scheduler, step, best_eval_metric, opt, dir_path, name):
     model_to_save = model.module if hasattr(model, "module") else model
     path = os.path.join(dir_path, "checkpoint")
-    epoch_path = os.path.join(path, name) #"step-%s" % step)
+    epoch_path = os.path.join(path, name)  # "step-%s" % step)
     os.makedirs(epoch_path, exist_ok=True)
     model_to_save.save_pretrained(epoch_path)
     cp = os.path.join(path, "latest")
@@ -75,7 +79,7 @@ def load(model_class, dir_path, opt, reset_params=False):
     logger.info("Loading %s" % epoch_path)
     model = model_class.from_pretrained(epoch_path)
     model = model.to(opt.device)
-    logger.info("loading checkpoint %s" %optimizer_path)
+    logger.info("loading checkpoint %s" % optimizer_path)
     checkpoint = torch.load(optimizer_path, map_location=opt.device)
     opt_checkpoint = checkpoint["opt"]
     step = checkpoint["step"]
@@ -92,6 +96,7 @@ def load(model_class, dir_path, opt, reset_params=False):
 
     return model, optimizer, scheduler, opt_checkpoint, step, best_eval_metric
 
+
 class WarmupLinearScheduler(torch.optim.lr_scheduler.LambdaLR):
     def __init__(self, optimizer, warmup_steps, scheduler_steps, min_ratio, fixed_lr, last_epoch=-1):
         self.warmup_steps = warmup_steps
@@ -104,19 +109,21 @@ class WarmupLinearScheduler(torch.optim.lr_scheduler.LambdaLR):
 
     def lr_lambda(self, step):
         if step < self.warmup_steps:
-            return (1 - self.min_ratio)*step/float(max(1, self.warmup_steps)) + self.min_ratio
+            return (1 - self.min_ratio) * step / float(max(1, self.warmup_steps)) + self.min_ratio
 
         if self.fixed_lr:
             return 1.0
 
         return max(0.0,
-            1.0 + (self.min_ratio - 1) * (step - self.warmup_steps)/float(max(1.0, self.scheduler_steps - self.warmup_steps)),
-        )
+                   1.0 + (self.min_ratio - 1) * (step - self.warmup_steps) / float(
+                       max(1.0, self.scheduler_steps - self.warmup_steps)),
+                   )
 
 
 class FixedScheduler(torch.optim.lr_scheduler.LambdaLR):
     def __init__(self, optimizer, last_epoch=-1):
         super(FixedScheduler, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
+
     def lr_lambda(self, step):
         return 1.0
 
@@ -139,7 +146,8 @@ def set_optim(opt, model):
             scheduler_steps = opt.total_steps
         else:
             scheduler_steps = opt.scheduler_steps
-        scheduler = WarmupLinearScheduler(optimizer, warmup_steps=opt.warmup_steps, scheduler_steps=scheduler_steps, min_ratio=0., fixed_lr=opt.fixed_lr)
+        scheduler = WarmupLinearScheduler(optimizer, warmup_steps=opt.warmup_steps, scheduler_steps=scheduler_steps,
+                                          min_ratio=0., fixed_lr=opt.fixed_lr)
     return optimizer, scheduler
 
 
@@ -208,18 +216,19 @@ def save_distributed_dataset(data, opt):
             json.dump(alldata, fout, indent=4)
         write_path.rmdir()
 
-def load_passages(path):
+
+def load_descriptions(path):
     if not os.path.exists(path):
         logger.info(f'{path} does not exist')
         return
     logger.info(f'Loading passages from: {path}')
-    passages = []
+    descriptions = []
     with open(path) as fin:
         reader = csv.reader(fin, delimiter='\t')
         for k, row in enumerate(reader):
             if not row[0] == 'id':
                 try:
-                    passages.append((row[0], row[1], row[2]))
+                    descriptions.append((row[0], row[1], row[2]))
                 except:
                     logger.warning(f'The following input line has not been correctly loaded: {row}')
-    return passages
+    return descriptions

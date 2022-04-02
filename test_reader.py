@@ -1,16 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# All rights reserved.
-# 
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-
 import torch
 import transformers
 import numpy as np
 from pathlib import Path
 import torch.distributed as dist
 from torch.utils.data import DataLoader, SequentialSampler
-
 
 import slurm
 import util
@@ -19,19 +12,20 @@ import data
 import evaluation
 import model
 
+
 def evaluate(model, dataset, dataloader, tokenizer, opt):
     loss, curr_loss = 0.0, 0.0
-    #model.eval()
+    # model.eval()
     if hasattr(model, "module"):
         model = model.module
     if opt.write_crossattention_scores:
         model.overwrite_forward_crossattention()
-        model.reset_score_storage() 
+        model.reset_score_storage()
     total = 0
     exactmatch = []
     if opt.write_results:
         write_path = Path(opt.checkpoint_dir) / opt.name / 'test_results'
-        fw = open(write_path / ('%d.txt'%opt.global_rank), 'a')
+        fw = open(write_path / ('%d.txt' % opt.global_rank), 'a')
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
             (idx, _, _, context_ids, context_mask) = batch
@@ -40,9 +34,9 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                 model.reset_score_storage()
 
             outputs = model.generate(
-                input_ids=context_ids,#.cuda(),
-                attention_mask=context_mask,#.cuda(),
-                max_length=500,
+                input_ids=context_ids.cuda(),
+                attention_mask=context_mask.cuda(),
+                max_length=700,
             )
 
             if opt.write_crossattention_scores:
@@ -63,7 +57,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
 
                 total += 1
             if (i + 1) % opt.eval_print_freq == 0:
-                log = f'Process rank:{opt.global_rank}, {i+1} / {len(dataloader)}'
+                log = f'Process rank:{opt.global_rank}, {i + 1} / {len(dataloader)}'
                 if len(exactmatch) == 0:
                     log += '| no answer to compute scores'
                 else:
@@ -74,7 +68,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
     if opt.is_distributed:
         torch.distributed.barrier()
     score, total = util.weighted_average(np.mean(exactmatch), total, opt)
-    
+
     return score, total
 
 
@@ -86,16 +80,16 @@ if __name__ == "__main__":
     slurm.init_distributed_mode(opt)
     opt.train_batch_size = opt.per_gpu_batch_size * max(1, opt.world_size)
 
-    opt.eval_data = 'preprocessed_data.json'
+    opt.eval_data = './inputs/preprocessed_data.json'
     opt.per_gpu_batch_size = 1
-    opt.n_context = 5
+    opt.n_context = 50
     opt.name = "test"
     opt.checkpoint_dir = 'checkpoint'
     opt.world_size = 1
     opt.global_rank = 0
     opt.model_path = "t5-base"
 
-    dir_path = Path(opt.checkpoint_dir)/opt.name
+    dir_path = Path(opt.checkpoint_dir) / opt.name
     directory_exists = dir_path.exists()
     if opt.is_distributed:
         torch.distributed.barrier()
@@ -106,29 +100,29 @@ if __name__ == "__main__":
     if not directory_exists and opt.is_main:
         options.print_options(opt)
 
-
     tokenizer = transformers.T5Tokenizer.from_pretrained('t5-base', return_dict=False)
 
     collator_function = data.Collator(opt.text_maxlength, tokenizer)
     eval_examples = data.load_data(
-        opt.eval_data, 
-        global_rank=opt.global_rank, #use the global rank and world size attibutes to split the eval set on multiple gpus
+        opt.eval_data,
+        global_rank=opt.global_rank,
+        # use the global rank and world size attibutes to split the eval set on multiple gpus
         world_size=opt.world_size
     )
     eval_dataset = data.Dataset(
-        eval_examples, 
-        opt.n_context, 
+        eval_examples,
+        opt.n_context,
     )
 
-    eval_sampler = SequentialSampler(eval_dataset) 
+    eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(
-        eval_dataset, 
-        sampler=eval_sampler, 
+        eval_dataset,
+        sampler=eval_sampler,
         batch_size=opt.per_gpu_batch_size,
-        num_workers=20, 
+        num_workers=20,
         collate_fn=collator_function
     )
-    
+
     model_class = model.FiDT5
     model = model_class.from_pretrained(opt.model_path)
     model = model.to(opt.device)
@@ -136,12 +130,11 @@ if __name__ == "__main__":
     logger.info("Start eval")
     exactmatch, total = evaluate(model, eval_dataset, eval_dataloader, tokenizer, opt)
 
-    logger.info(f'EM {100*exactmatch:.2f}, Total number of example {total}')
+    logger.info(f'EM {100 * exactmatch:.2f}, Total number of example {total}')
 
     if opt.write_results and opt.is_main:
         glob_path = Path(opt.checkpoint_dir) / opt.name / 'test_results'
         write_path = Path(opt.checkpoint_dir) / opt.name / 'final_output.txt'
-        util.write_output(glob_path, write_path) 
+        util.write_output(glob_path, write_path)
     if opt.write_crossattention_scores:
         util.save_distributed_dataset(eval_dataset.data, opt)
-
