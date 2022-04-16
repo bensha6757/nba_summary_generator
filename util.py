@@ -215,20 +215,3 @@ def save_distributed_dataset(data, opt):
         with open(final_path, 'w') as fout:
             json.dump(alldata, fout, indent=4)
         write_path.rmdir()
-
-
-def load_descriptions(path):
-    if not os.path.exists(path):
-        logger.info(f'{path} does not exist')
-        return
-    logger.info(f'Loading passages from: {path}')
-    descriptions = []
-    with open(path) as fin:
-        reader = csv.reader(fin, delimiter='\t')
-        for k, row in enumerate(reader):
-            if not row[0] == 'id':
-                try:
-                    descriptions.append((row[0], row[1], row[2]))
-                except:
-                    logger.warning(f'The following input line has not been correctly loaded: {row}')
-    return descriptions

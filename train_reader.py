@@ -24,9 +24,10 @@ def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, c
             logger.warning('Tensorboard is not available.')
 
     torch.manual_seed(opt.global_rank + opt.seed)  # different seed for different sampling depending on global_rank
+    train_sampler = DistributedSampler(train_dataset) if opt.is_distributed else RandomSampler(train_dataset)
     train_dataloader = DataLoader(
         train_dataset,
-        sampler=RandomSampler(train_dataset),
+        sampler=train_sampler,
         batch_size=opt.per_gpu_batch_size,
         drop_last=True,
         num_workers=10,

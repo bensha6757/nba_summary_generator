@@ -80,15 +80,6 @@ if __name__ == "__main__":
     slurm.init_distributed_mode(opt)
     opt.train_batch_size = opt.per_gpu_batch_size * max(1, opt.world_size)
 
-    opt.eval_data = './inputs/preprocessed_data.json'
-    opt.per_gpu_batch_size = 1
-    opt.n_context = 50
-    opt.name = "test"
-    opt.checkpoint_dir = 'checkpoint'
-    opt.world_size = 1
-    opt.global_rank = 0
-    opt.model_path = "t5-base"
-
     dir_path = Path(opt.checkpoint_dir) / opt.name
     directory_exists = dir_path.exists()
     if opt.is_distributed:
