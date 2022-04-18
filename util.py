@@ -1,9 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-
 import os
 import errno
 import torch
@@ -169,14 +163,6 @@ def sum_main(x, opt):
     return x
 
 
-def weighted_average(x, count, opt):
-    if not opt.is_distributed:
-        return x, count
-    t_loss = torch.tensor([x * count], device=opt.device)
-    t_total = torch.tensor([count], device=opt.device)
-    t_loss = sum_main(t_loss, opt)
-    t_total = sum_main(t_total, opt)
-    return (t_loss / t_total).item(), t_total.item()
 
 
 def write_output(glob_path, output_path):

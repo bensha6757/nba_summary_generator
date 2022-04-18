@@ -1,6 +1,5 @@
 import torch
 import transformers
-import numpy as np
 from pathlib import Path
 import torch.distributed as dist
 from torch.utils.data import DataLoader, SequentialSampler
@@ -9,67 +8,50 @@ import slurm
 import util
 from options import Options
 import data
-import evaluation
 import model
+from datasets import load_metric
 
 
 def evaluate(model, dataset, dataloader, tokenizer, opt):
-    loss, curr_loss = 0.0, 0.0
-    # model.eval()
-    if hasattr(model, "module"):
-        model = model.module
-    if opt.write_crossattention_scores:
-        model.overwrite_forward_crossattention()
-        model.reset_score_storage()
-    total = 0
-    exactmatch = []
+    predictions = []
+    references = []
+    model = model.module if hasattr(model, 'module') else model
     if opt.write_results:
         write_path = Path(opt.checkpoint_dir) / opt.name / 'test_results'
         fw = open(write_path / ('%d.txt' % opt.global_rank), 'a')
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
-            (idx, _, _, context_ids, context_mask) = batch
-
-            if opt.write_crossattention_scores:
-                model.reset_score_storage()
+            (idx, _, _, description_ids, description_mask) = batch
 
             outputs = model.generate(
-                input_ids=context_ids.cuda(),
-                attention_mask=context_mask.cuda(),
+                input_ids=description_ids.cuda(),
+                attention_mask=description_mask.cuda(),
                 max_length=700,
             )
 
-            if opt.write_crossattention_scores:
-                crossattention_scores = model.get_crossattention_scores(context_mask.cuda())
-
-            for k, o in enumerate(outputs):
-                ans = tokenizer.decode(o, skip_special_tokens=True)
+            for k, output in enumerate(outputs):
+                ans = tokenizer.decode(output, skip_special_tokens=True)
                 example = dataset.data[idx[k]]
-                if 'answers' in example:
-                    score = evaluation.ems(ans, example['answers'])
-                    exactmatch.append(score)
+                predictions.append(ans)
+                references.append(example['summary'])
 
                 if opt.write_results:
-                    fw.write(str(example['id']) + "\t" + ans + '\n')
-                if opt.write_crossattention_scores:
-                    for j in range(context_ids.size(1)):
-                        example['ctxs'][j]['score'] = crossattention_scores[k, j].item()
+                    fw.write(str(example['id']) + "\tprediction:\n" + ans + '\n')
+                    fw.write(str(example['id']) + "\treference:\n" + example['summary'] + '\n')
+                    fw.write('************************************************\n\n\n')
 
-                total += 1
-            if (i + 1) % opt.eval_print_freq == 0:
-                log = f'Process rank:{opt.global_rank}, {i + 1} / {len(dataloader)}'
-                if len(exactmatch) == 0:
-                    log += '| no answer to compute scores'
-                else:
-                    log += f' | average = {np.mean(exactmatch):.3f}'
-                logger.warning(log)
+                if (k + 1) % opt.eval_print_freq == 0:
+                    print(str(example['id']) + "\tprediction:\n" + ans + '\n')
+                    print(str(example['id']) + "\treference:\n" + example['summary'] + '\n')
+                    print('************************************************\n\n\n')
 
-    logger.warning(f'Process rank:{opt.global_rank}, total {total} | average = {np.mean(exactmatch):.3f}')
-    if opt.is_distributed:
-        torch.distributed.barrier()
-    score, total = util.weighted_average(np.mean(exactmatch), total, opt)
-
-    return score, total
+        bertscore_metric = load_metric('bertscore')
+        bert_scores = bertscore_metric.compute(
+            predictions=predictions,
+            references=references,
+            lang="en")
+        print('BERT scores: ' + bert_scores)
+        print('F1 BERT scores: ' + bert_scores['f1'])
 
 
 if __name__ == "__main__":
@@ -78,7 +60,7 @@ if __name__ == "__main__":
     options.add_eval_options()
     opt = options.parse()
     slurm.init_distributed_mode(opt)
-    opt.train_batch_size = opt.per_gpu_batch_size * max(1, opt.world_size)
+    opt.train_batch_size = opt.batch_size_per_gpu * max(1, opt.world_size)
 
     dir_path = Path(opt.checkpoint_dir) / opt.name
     directory_exists = dir_path.exists()
@@ -91,7 +73,7 @@ if __name__ == "__main__":
     if not directory_exists and opt.is_main:
         options.print_options(opt)
 
-    tokenizer = transformers.T5Tokenizer.from_pretrained('t5-base', return_dict=False)
+    tokenizer = transformers.T5Tokenizer.from_pretrained('t5-small', return_dict=False)
 
     collator_function = data.Collator(opt.text_maxlength, tokenizer)
     eval_examples = data.load_data(
@@ -102,14 +84,14 @@ if __name__ == "__main__":
     )
     eval_dataset = data.Dataset(
         eval_examples,
-        opt.n_context,
+        opt.n_descriptions,
     )
 
     eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(
         eval_dataset,
         sampler=eval_sampler,
-        batch_size=opt.per_gpu_batch_size,
+        batch_size=opt.batch_size_per_gpu,
         num_workers=20,
         collate_fn=collator_function
     )
@@ -119,9 +101,7 @@ if __name__ == "__main__":
     model = model.to(opt.device)
 
     logger.info("Start eval")
-    exactmatch, total = evaluate(model, eval_dataset, eval_dataloader, tokenizer, opt)
-
-    logger.info(f'EM {100 * exactmatch:.2f}, Total number of example {total}')
+    evaluate(model, eval_dataset, eval_dataloader, tokenizer, opt)
 
     if opt.write_results and opt.is_main:
         glob_path = Path(opt.checkpoint_dir) / opt.name / 'test_results'

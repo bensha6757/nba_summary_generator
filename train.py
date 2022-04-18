@@ -1,18 +1,15 @@
-import time
-import sys
 import torch
 import transformers
-import numpy as np
 from pathlib import Path
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, SequentialSampler
 from options import Options
 
 import slurm
 import util
-import evaluation
 import data
 import model
 from tqdm import tqdm
+from datasets import load_metric
 
 
 def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, collator, best_dev_em, checkpoint_path):
@@ -28,7 +25,7 @@ def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, c
     train_dataloader = DataLoader(
         train_dataset,
         sampler=train_sampler,
-        batch_size=opt.per_gpu_batch_size,
+        batch_size=opt.batch_size_per_gpu,
         drop_last=True,
         num_workers=10,
         collate_fn=collator
@@ -42,11 +39,11 @@ def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, c
         print('epoch #', epoch)
         for i, batch in enumerate(tqdm(train_dataloader)):
             step += 1
-            (idx, labels, _, context_ids, context_mask) = batch
+            (idx, labels, _, description_ids, description_mask) = batch
 
             train_loss = model(
-                input_ids=context_ids.cuda(),
-                attention_mask=context_mask.cuda(),
+                input_ids=description_ids.cuda(),
+                attention_mask=description_mask.cuda(),
                 labels=labels.cuda()
             )[0]
 
@@ -75,7 +72,7 @@ def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, c
                 logger.info(log)
                 if tb_logger is not None:
                     tb_logger.add_scalar("Evaluation", dev_em, step)
-                    tb_logger.add_scalar("Training", curr_loss / (opt.eval_freq), step)
+                    tb_logger.add_scalar("Training", curr_loss / opt.eval_freq, step)
                 curr_loss = 0.
 
             if step % opt.save_freq == 0:
@@ -89,38 +86,44 @@ def evaluate(model, dataset, tokenizer, collator, opt):
     sampler = SequentialSampler(dataset)
     dataloader = DataLoader(dataset,
                             sampler=sampler,
-                            batch_size=opt.per_gpu_batch_size,
+                            batch_size=opt.batch_size_per_gpu,
                             drop_last=False,
                             num_workers=10,
-                            collate_fn=collator
-                            )
+                            collate_fn=collator)
     model.eval()
-    total = 0
-    exactmatch = []
+    predictions = []
+    references = []
     model = model.module if hasattr(model, 'module') else model
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
-            (idx, _, _, context_ids, context_mask) = batch
+            (idx, _, _, description_ids, description_mask) = batch
 
             outputs = model.generate(
-                input_ids=context_ids.cuda(),
-                attention_mask=context_mask.cuda(),
-                max_length=700
-            )
+                input_ids=description_ids.cuda(),
+                attention_mask=description_mask.cuda(),
+                max_length=700)
 
-            for k, o in enumerate(outputs):
-                ans = tokenizer.decode(o, skip_special_tokens=True)
-                if i % 500 == 0:
-                    print(ans)
+            for k, output in enumerate(outputs):
+                ans = tokenizer.decode(output, skip_special_tokens=True)
                 gold = dataset.get_example(idx[k])['summary']
-                score = evaluation.ems(ans, gold)
-                total += 1
-                exactmatch.append(score)
-            if i % 500 == 0:
-                print('************************************************')
 
-    exactmatch, total = util.weighted_average(np.mean(exactmatch), total, opt)
-    return exactmatch
+                predictions.append(ans)
+                references.append(gold)
+
+                if (k + 1) % opt.eval_print_freq == 0:
+                    print("\tprediction:\n" + ans + '\n')
+                    print("\treference:\n" + gold + '\n')
+                    print('************************************************\n\n\n')
+
+        bertscore_metric = load_metric('bertscore')
+        bert_scores = bertscore_metric.compute(
+            predictions=predictions,
+            references=references,
+            lang="en")
+        print('BERT scores: ' + bert_scores)
+        print('F1 BERT scores: ' + bert_scores['f1'])
+
+    return bert_scores['f1']
 
 
 if __name__ == "__main__":
@@ -163,14 +166,14 @@ if __name__ == "__main__":
         global_rank=opt.global_rank,
         world_size=opt.world_size,
     )
-    train_dataset = data.Dataset(train_examples, opt.n_context)
+    train_dataset = data.Dataset(train_examples, opt.n_descriptions)
     # use golbal rank and world size to split the eval set on multiple gpus
     eval_examples = data.load_data(
         opt.eval_data,
         global_rank=opt.global_rank,
         world_size=opt.world_size,
     )
-    eval_dataset = data.Dataset(eval_examples, opt.n_context)
+    eval_dataset = data.Dataset(eval_examples, opt.n_descriptions)
 
     if not checkpoint_exists and opt.model_path == "none":
         t5 = transformers.T5ForConditionalGeneration.from_pretrained(model_name)
