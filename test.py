@@ -26,7 +26,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
             outputs = model.generate(
                 input_ids=description_ids.cuda(),
                 attention_mask=description_mask.cuda(),
-                max_length=700,
+                max_length=700,beams=5
             )
 
             for k, output in enumerate(outputs):
