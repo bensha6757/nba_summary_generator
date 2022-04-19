@@ -302,6 +302,8 @@ def is_black_list_in_sent(sent, blacklist):
 
 def remove_sub_sent(sent, blacklist):
     clean_sent = []
+    if sent.startswith(('Next ,', ' Next ,', 'Up next ,', ' Up next ,', ' Next up ,', 'Next up ,')):
+        return ''
     for sub_sent in sent.split(","):
         if not is_black_list_in_sent(sub_sent, blacklist):
             clean_sent.append(sub_sent)
@@ -353,7 +355,12 @@ def write_output_file(output_file_name, file_name_suffix, data):
 if __name__ == '__main__':
     blacklist = 'injured|injury|injuries|referee|refereeing|referees|judge|judges|judging|judgment|all-star|allstar' \
                 '|all star|knee|knees|shoulder|shoulders|series|serieses|Achilles|neck|hamstring|Next ,' \
-                '|\(.[a-z]+.\)|playoff|playoffs|will head|next game|next games|will travel|road trip|road trips|road-trip '
+                '|\(.[a-z]+.\)|playoff|playoffs|will head|next game|next games|will travel|road trip|road ' \
+                'trips|road-trip|will look to bounce back|will look to bounce - back|as they take on|as they travel ' \
+                'to|is a road matchup|as they play host|right back in action|move on to|to face|will host|will ' \
+                'visit|travel to|Up next ,| return home| returns home|to host| play host|when they host|will try| to ' \
+                'visit|to take on the| head home| head back home|will return to action|as they visit|be in ' \
+                'action|play again on|play again until|will be hosting|will be visiting|Next up|Next on the agenda'
 
     input_files = ["./inputs/D1_2014", "./inputs/D1_2015", "./inputs/D1_2016", "./inputs/D1_2017", "./inputs/D1_2018"]
     output_file_name = "./inputs/preprocessed_data"
