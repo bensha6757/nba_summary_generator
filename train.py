@@ -10,6 +10,7 @@ import data
 import model
 from tqdm import tqdm
 from datasets import load_metric
+from rouge import Rouge
 
 
 def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, collator, best_dev_em, checkpoint_path):
@@ -114,7 +115,11 @@ def evaluate(model, dataset, tokenizer, collator, opt):
                     print("\tprediction:\n" + ans + '\n')
                     print("\treference:\n" + gold + '\n')
                     print('************************************************\n\n\n')
-
+        rouge = Rouge()
+        scores = rouge.get_scores(predictions, references)
+        scores = [score['rouge-1']['f'] for score in scores]
+        f1_score = sum(scores) / len(scores)
+        print('F1 rouge score: ' + str(f1_score))
         # bertscore_metric = load_metric('bertscore')
         # bert_scores = bertscore_metric.compute(
         #     predictions=predictions,
@@ -122,8 +127,8 @@ def evaluate(model, dataset, tokenizer, collator, opt):
         #     lang="en")
         # print('BERT scores: ' + bert_scores)
         # print('F1 BERT scores: ' + bert_scores['f1'])
-
-    return 0  # bert_scores['f1']
+    return f1_score
+    # return bert_scores['f1']
 
 
 if __name__ == "__main__":
