@@ -8,7 +8,6 @@ import slurm
 import util
 import data
 import model
-from tqdm import tqdm
 from datasets import load_metric
 from rouge import Rouge
 
@@ -38,7 +37,7 @@ def train(model, optimizer, scheduler, step, train_dataset, eval_dataset, opt, c
     while step < opt.total_steps:
         epoch += 1
         print('epoch #', epoch)
-        for i, batch in enumerate(tqdm(train_dataloader)):
+        for i, batch in enumerate(train_dataloader):
             step += 1
             (idx, labels, _, description_ids, description_mask) = batch
 
