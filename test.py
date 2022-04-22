@@ -27,7 +27,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                 input_ids=description_ids.cuda(),
                 attention_mask=description_mask.cuda(),
                 max_length=700,
-                # num_beams=5
+                # beams=5
             )
 
             for k, output in enumerate(outputs):
