@@ -115,15 +115,15 @@ def evaluate(model, dataset, tokenizer, collator, opt):
                     print("\treference:\n" + gold + '\n')
                     print('************************************************\n\n\n')
 
-        bertscore_metric = load_metric('bertscore')
-        bert_scores = bertscore_metric.compute(
-            predictions=predictions,
-            references=references,
-            lang="en")
-        print('BERT scores: ' + bert_scores)
-        print('F1 BERT scores: ' + bert_scores['f1'])
+        # bertscore_metric = load_metric('bertscore')
+        # bert_scores = bertscore_metric.compute(
+        #     predictions=predictions,
+        #     references=references,
+        #     lang="en")
+        # print('BERT scores: ' + bert_scores)
+        # print('F1 BERT scores: ' + bert_scores['f1'])
 
-    return bert_scores['f1']
+    return 0  # bert_scores['f1']
 
 
 if __name__ == "__main__":
