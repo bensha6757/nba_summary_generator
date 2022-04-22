@@ -46,13 +46,13 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                     print(str(example['id']) + "\treference:\n" + example['summary'] + '\n')
                     print('************************************************\n\n\n')
 
-        bertscore_metric = load_metric('bertscore')
-        bert_scores = bertscore_metric.compute(
-            predictions=predictions,
-            references=references,
-            lang="en")
-        print('BERT scores: ' + bert_scores)
-        print('F1 BERT scores: ' + bert_scores['f1'])
+        # bertscore_metric = load_metric('bertscore')
+        # bert_scores = bertscore_metric.compute(
+        #     predictions=predictions,
+        #     references=references,
+        #     lang="en")
+        # print('BERT scores: ' + bert_scores)
+        # print('F1 BERT scores: ' + bert_scores['f1'])
 
 
 if __name__ == "__main__":
