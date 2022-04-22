@@ -341,7 +341,7 @@ def preprocess_data(input_files, output_file_name, blacklist):
                     json_elements.append(create_json_format(summary, descriptions))
 
     train, test = train_test_split(json_elements, test_size=0.2)
-    val, test = train_test_split(test, test_size=0.5)
+    val, test = train_test_split(test, test_size=0.95)
     write_output_file(output_file_name, '_train.json', train)
     write_output_file(output_file_name, '_test.json', test)
     write_output_file(output_file_name, '_val.json', val)
