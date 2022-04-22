@@ -46,6 +46,8 @@ def encode_descriptions(batch_text_descriptions, tokenizer, max_length):
 
     description_ids = torch.cat(description_ids, dim=0)
     description_masks = torch.cat(description_masks, dim=0)
+    print(description_ids)
+    print(description_ids.size())
     return description_ids, description_masks.bool()
 
 

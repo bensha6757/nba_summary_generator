@@ -27,6 +27,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                 input_ids=description_ids.cuda(),
                 attention_mask=description_mask.cuda(),
                 max_length=700,
+                # num_beams=5
             )
 
             for k, output in enumerate(outputs):
@@ -40,7 +41,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                     fw.write(str(example['id']) + "\treference:\n" + example['summary'] + '\n')
                     fw.write('************************************************\n\n\n')
 
-                if (k + 1) % opt.eval_print_freq == 0:
+                if (i + 1) % opt.eval_print_freq == 0:
                     print(str(example['id']) + "\tprediction:\n" + ans + '\n')
                     print(str(example['id']) + "\treference:\n" + example['summary'] + '\n')
                     print('************************************************\n\n\n')

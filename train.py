@@ -110,7 +110,7 @@ def evaluate(model, dataset, tokenizer, collator, opt):
                 predictions.append(ans)
                 references.append(gold)
 
-                if (k + 1) % opt.eval_print_freq == 0:
+                if (i + 1) % opt.eval_print_freq == 0:
                     print("\tprediction:\n" + ans + '\n')
                     print("\treference:\n" + gold + '\n')
                     print('************************************************\n\n\n')

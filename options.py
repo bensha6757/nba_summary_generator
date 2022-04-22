@@ -43,22 +43,6 @@ class Options():
                                  help='article titles not included in passages')
         self.parser.add_argument('--n_descriptions', type=int, default=17)
 
-    def add_retriever_options(self):
-        self.parser.add_argument('--train_data', type=str, default='none', help='path of train data')
-        self.parser.add_argument('--eval_data', type=str, default='none', help='path of eval data')
-        self.parser.add_argument('--indexing_dimension', type=int, default=768)
-        self.parser.add_argument('--no_projection', action='store_true',
-                                 help='No addition Linear layer and layernorm, only works if indexing size equals 768')
-        self.parser.add_argument('--question_maxlength', type=int, default=40,
-                                 help='maximum number of tokens in questions')
-        self.parser.add_argument('--passage_maxlength', type=int, default=200,
-                                 help='maximum number of tokens in passages')
-        self.parser.add_argument('--no_question_mask', action='store_true')
-        self.parser.add_argument('--no_passage_mask', action='store_true')
-        self.parser.add_argument('--extract_cls', action='store_true')
-        self.parser.add_argument('--no_title', action='store_true',
-                                 help='article titles not included in passages')
-        self.parser.add_argument('--n_descriptions', type=int, default=1)
 
     def initialize_parser(self):
         # basic parameters

@@ -11,16 +11,6 @@ class FiDT5(transformers.T5ForConditionalGeneration):
         super().__init__(config)
         self.wrap_encoder()
 
-    def forward_(self, **kwargs):
-        if 'input_ids' in kwargs:
-            kwargs['input_ids'] = kwargs['input_ids'].view(kwargs['input_ids'].size(0), -1)
-        if 'attention_mask' in kwargs:
-            kwargs['attention_mask'] = kwargs['attention_mask'].view(kwargs['attention_mask'].size(0), -1)
-
-        return super(FiDT5, self).forward(
-            **kwargs
-        )
-
     # We need to resize as B x (N * L) instead of (B * N) x L here
     # because the T5 forward method uses the input tensors to infer
     # dimensions used in the decoder.
@@ -30,7 +20,12 @@ class FiDT5(transformers.T5ForConditionalGeneration):
             # inputs might have already be resized in the generate method
             if input_ids.dim() == 3:
                 self.encoder.n_passages = input_ids.size(1)
+            print("input ids before view change")
+            print(input_ids.size())
             input_ids = input_ids.view(input_ids.size(0), -1)
+            print("input ids after view change")
+            print(input_ids)
+            print(input_ids.size())
         if attention_mask is not None:
             attention_mask = attention_mask.view(attention_mask.size(0), -1)
         return super().forward(
@@ -40,12 +35,13 @@ class FiDT5(transformers.T5ForConditionalGeneration):
         )
 
     # We need to resize the inputs here, as the generate method expect 2D tensors
-    def generate(self, input_ids, attention_mask, max_length):
+    def generate(self, input_ids, attention_mask, max_length, beams=None):
         self.encoder.n_passages = input_ids.size(1)
         return super().generate(
             input_ids=input_ids.view(input_ids.size(0), -1),
             attention_mask=attention_mask.view(attention_mask.size(0), -1),
-            max_length=max_length
+            max_length=max_length,
+            num_beams=beams
         )
 
     def wrap_encoder(self, use_checkpoint=False):
@@ -95,9 +91,15 @@ class EncoderWrapper(torch.nn.Module):
         bsz, total_length = input_ids.shape
         passage_length = total_length // self.n_passages
         input_ids = input_ids.view(bsz * self.n_passages, passage_length)
+        print("input_ids after EncoderWrapper view change")
+        print(input_ids)
+        print(input_ids.size())
         attention_mask = attention_mask.view(bsz * self.n_passages, passage_length)
         outputs = self.encoder(input_ids, attention_mask, **kwargs)
+        print("EncoderWrapper after encoder outpus[0] size")
+        print(outputs[0].size())
         outputs = (outputs[0].view(bsz, self.n_passages * passage_length, -1),) + outputs[1:]
+        print(f"outputs size is {outputs.size()}")
         return outputs
 
 
