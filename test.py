@@ -10,6 +10,8 @@ from options import Options
 import data
 import model
 from datasets import load_metric
+from nltk.translate.bleu_score import corpus_bleu
+from rouge import Rouge
 
 
 def evaluate(model, dataset, dataloader, tokenizer, opt):
@@ -26,8 +28,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
             outputs = model.generate(
                 input_ids=description_ids.cuda(),
                 attention_mask=description_mask.cuda(),
-                max_length=700,
-                # beams=5
+                max_length=700
             )
 
             for k, output in enumerate(outputs):
@@ -45,6 +46,18 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                     print(str(example['id']) + "\tprediction:\n" + ans + '\n')
                     print(str(example['id']) + "\treference:\n" + example['summary'] + '\n')
                     print('************************************************\n\n\n')
+        rouge = Rouge()
+        rouge_scores = rouge.get_scores(predictions, references)
+        rouge_scores = [score['rouge-1']['f'] for score in rouge_scores]
+        rouge_f1_score = sum(rouge_scores) / len(rouge_scores)
+        print('F1 rouge score: ' + str(rouge_f1_score))
+
+        bleu_score = corpus_bleu(
+            [[ref.split()] for ref in references],
+            [pred.split() for pred in predictions]
+        )
+
+        print('bleu score: ' + str(bleu_score * 100))
 
         # bertscore_metric = load_metric('bertscore')
         # bert_scores = bertscore_metric.compute(
