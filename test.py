@@ -50,7 +50,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
         rouge_scores = rouge.get_scores(predictions, references)
         rouge_scores = [score['rouge-1']['f'] for score in rouge_scores]
         rouge_f1_score = sum(rouge_scores) / len(rouge_scores)
-        print('F1 rouge score: ' + str(rouge_f1_score))
+        print('F1 rouge score: ' + str(rouge_f1_score * 100))
 
         bleu_score = corpus_bleu(
             [[ref.split()] for ref in references],
